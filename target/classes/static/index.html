@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atrapar al Gato</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Atrapar al Gato</h1>
+        
+        <div class="game-info">
+            <div class="player-section">
+                <label for="player-name">Nombre del Jugador:</label>
+                <input type="text" id="player-name" placeholder="Ingresa tu nombre" maxlength="20">
+            </div>
+            
+            <div class="status-section">
+                <p>Estado: <span id="game-status">Presiona "Nuevo Juego" para comenzar</span></p>
+                <p>Movimientos: <span id="moves-count">0</span></p>
+            </div>
+            
+            <button id="start-game">Nuevo Juego</button>
+            <button id="show-scores" onclick="showHighScores()">Ver Puntuaciones</button>
+        </div>
+        
+        <div class="hex-board" id="board">
+            <!-- Las celdas hexagonales se generarán aquí -->
+        </div>
+        
+        <!-- High Score Section -->
+        <div class="high-score-section" id="high-score-section" style="display: none;">
+            <h3>🏆 Mejores Puntuaciones</h3>
+            <div class="score-tabs">
+                <button class="tab-button active" onclick="showScoreTab('top')">Top 10</button>
+                <button class="tab-button" onclick="showScoreTab('winning')">Solo Victorias</button>
+                <button class="tab-button" onclick="showScoreTab('recent')">Recientes</button>
+            </div>
+            <ul class="score-list" id="score-list">
+                <!-- Scores will be populated here -->
+            </ul>
+            <button onclick="hideHighScores()">Cerrar</button>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html> 
