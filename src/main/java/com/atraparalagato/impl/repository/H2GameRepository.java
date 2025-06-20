@@ -9,6 +9,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.time.ZoneId;
 
 public class H2GameRepository extends DataRepository<HexGameState, String> {
 
@@ -160,8 +161,10 @@ public class H2GameRepository extends DataRepository<HexGameState, String> {
 
     @Override
     public List<HexGameState> findAllSorted(Function<HexGameState, ? extends Comparable<?>> sortKeyExtractor, boolean ascending) {
-        // Simple: cargar todos y ordenar en memoria
-        Comparator<HexGameState> comparator = Comparator.comparing(sortKeyExtractor);
+        Comparator<HexGameState> comparator = Comparator.comparing(
+            (HexGameState g) -> sortKeyExtractor.apply(g),
+            Comparator.nullsLast(Comparator.naturalOrder())
+        );
         if (!ascending) comparator = comparator.reversed();
         return findAll().stream().sorted(comparator).collect(Collectors.toList());
     }
