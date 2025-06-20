@@ -8,99 +8,139 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-/**
- * Implementación esqueleto de estrategia BFS (Breadth-First Search) para el gato.
- * 
- * Los estudiantes deben completar los métodos marcados con TODO.
- * 
- * Conceptos a implementar:
- * - Algoritmo BFS para pathfinding
- * - Exploración exhaustiva de caminos
- * - Garantía de encontrar el camino más corto
- * - Uso de colas para exploración por niveles
- */
 public class BFSCatMovement extends CatMovementStrategy<HexPosition> {
-    
+
     public BFSCatMovement(GameBoard<HexPosition> board) {
         super(board);
     }
-    
+
     @Override
     protected List<HexPosition> getPossibleMoves(HexPosition currentPosition) {
-        // TODO: Obtener todas las posiciones adyacentes válidas
-        // Filtrar posiciones bloqueadas y fuera de límites
-        throw new UnsupportedOperationException("Los estudiantes deben implementar getPossibleMoves");
+        // Devuelve las posiciones adyacentes no bloqueadas
+        return board.getAdjacentPositions(currentPosition).stream()
+                .filter(pos -> !board.isBlocked(pos))
+                .toList();
     }
-    
+
     @Override
-    protected Optional<HexPosition> selectBestMove(List<HexPosition> possibleMoves, 
-                                                  HexPosition currentPosition, 
+    protected Optional<HexPosition> selectBestMove(List<HexPosition> possibleMoves,
+                                                  HexPosition currentPosition,
                                                   HexPosition targetPosition) {
-        // TODO: Usar BFS para encontrar el mejor movimiento
-        // 1. Ejecutar BFS desde cada posible movimiento
-        // 2. Evaluar cuál lleva más rápido al objetivo
-        // 3. Retornar el primer paso del mejor camino
-        throw new UnsupportedOperationException("Los estudiantes deben implementar selectBestMove");
+        if (possibleMoves.isEmpty()) return Optional.empty();
+
+        Predicate<HexPosition> isGoal = getGoalPredicate();
+        List<HexPosition> bestPath = null;
+
+        for (HexPosition move : possibleMoves) {
+            List<HexPosition> path = bfsToGoal(move).orElse(null);
+            if (path != null && !path.isEmpty() && isGoal.test(path.get(path.size() - 1))) {
+                if (bestPath == null || path.size() < bestPath.size()) {
+                    bestPath = path;
+                }
+            }
+        }
+
+        if (bestPath != null && !bestPath.isEmpty()) {
+            return Optional.of(bestPath.get(0));
+        }
+        return Optional.empty();
     }
-    
+
     @Override
     protected Function<HexPosition, Double> getHeuristicFunction(HexPosition targetPosition) {
-        // TODO: BFS no necesita heurística, pero puede usarse para desempate
-        // Retornar función que calcule distancia euclidiana o Manhattan
-        throw new UnsupportedOperationException("Los estudiantes deben implementar getHeuristicFunction");
+        // No es necesario para BFS, pero se puede usar la distancia hexagonal para desempate
+        return position -> (double) position.distanceTo(targetPosition);
     }
-    
+
     @Override
     protected Predicate<HexPosition> getGoalPredicate() {
-        // TODO: Definir condición de objetivo (llegar al borde)
-        throw new UnsupportedOperationException("Los estudiantes deben implementar getGoalPredicate");
+        int size = board.getSize();
+        // El objetivo es cualquier celda en el borde del tablero
+        return pos -> Math.abs(pos.getQ()) == size ||
+                      Math.abs(pos.getR()) == size ||
+                      Math.abs(pos.getS()) == size;
     }
-    
+
     @Override
     protected double getMoveCost(HexPosition from, HexPosition to) {
-        // TODO: BFS usa costo uniforme (1.0 para movimientos adyacentes)
-        throw new UnsupportedOperationException("Los estudiantes deben implementar getMoveCost");
+        // Costo uniforme para BFS
+        return 1.0;
     }
-    
+
     @Override
     public boolean hasPathToGoal(HexPosition currentPosition) {
-        // TODO: Implementar BFS para verificar si existe camino al objetivo
-        // 1. Usar cola para exploración por niveles
-        // 2. Marcar posiciones visitadas
-        // 3. Retornar true si se encuentra el objetivo
-        throw new UnsupportedOperationException("Los estudiantes deben implementar hasPathToGoal");
+        return bfsToGoal(currentPosition).isPresent();
     }
-    
+
     @Override
     public List<HexPosition> getFullPath(HexPosition currentPosition, HexPosition targetPosition) {
-        // TODO: Implementar BFS completo para encontrar camino
-        // 1. Usar cola con información de camino
-        // 2. Reconstruir camino desde objetivo hasta inicio
-        // 3. Retornar camino completo
-        throw new UnsupportedOperationException("Los estudiantes deben implementar getFullPath");
+        // BFS hasta targetPosition específico
+        Queue<HexPosition> queue = new LinkedList<>();
+        Map<HexPosition, HexPosition> parentMap = new HashMap<>();
+        Set<HexPosition> visited = new HashSet<>();
+
+        queue.add(currentPosition);
+        visited.add(currentPosition);
+
+        while (!queue.isEmpty()) {
+            HexPosition pos = queue.poll();
+            if (pos.equals(targetPosition)) {
+                return reconstructPath(parentMap, currentPosition, targetPosition);
+            }
+            for (HexPosition neighbor : getPossibleMoves(pos)) {
+                if (!visited.contains(neighbor)) {
+                    visited.add(neighbor);
+                    parentMap.put(neighbor, pos);
+                    queue.add(neighbor);
+                }
+            }
+        }
+        return Collections.emptyList();
     }
-    
-    // Métodos auxiliares que los estudiantes pueden implementar
-    
-    /**
-     * TODO: Ejecutar BFS desde una posición hasta encontrar objetivo.
-     */
+
+    // Ejecuta BFS desde una posición hasta cualquier objetivo (borde)
     private Optional<List<HexPosition>> bfsToGoal(HexPosition start) {
-        throw new UnsupportedOperationException("Método auxiliar para implementar");
+        Predicate<HexPosition> isGoal = getGoalPredicate();
+        Queue<HexPosition> queue = new LinkedList<>();
+        Map<HexPosition, HexPosition> parentMap = new HashMap<>();
+        Set<HexPosition> visited = new HashSet<>();
+
+        queue.add(start);
+        visited.add(start);
+
+        while (!queue.isEmpty()) {
+            HexPosition pos = queue.poll();
+            if (isGoal.test(pos)) {
+                return Optional.of(reconstructPath(parentMap, start, pos));
+            }
+            for (HexPosition neighbor : getPossibleMoves(pos)) {
+                if (!visited.contains(neighbor)) {
+                    visited.add(neighbor);
+                    parentMap.put(neighbor, pos);
+                    queue.add(neighbor);
+                }
+            }
+        }
+        return Optional.empty();
     }
-    
-    /**
-     * TODO: Reconstruir camino desde mapa de padres.
-     */
-    private List<HexPosition> reconstructPath(Map<HexPosition, HexPosition> parentMap, 
-                                            HexPosition start, HexPosition goal) {
-        throw new UnsupportedOperationException("Método auxiliar para implementar");
+
+    // Reconstruye el camino desde el mapa de padres
+    private List<HexPosition> reconstructPath(Map<HexPosition, HexPosition> parentMap,
+                                              HexPosition start, HexPosition goal) {
+        List<HexPosition> path = new LinkedList<>();
+        HexPosition current = goal;
+        while (current != null && !current.equals(start)) {
+            path.add(0, current);
+            current = parentMap.get(current);
+        }
+        if (current != null) {
+            path.add(0, start);
+        }
+        return path;
     }
-    
-    /**
-     * TODO: Evaluar calidad de un camino encontrado.
-     */
+
+    // Evalúa la calidad de un camino (menor longitud es mejor)
     private double evaluatePathQuality(List<HexPosition> path) {
-        throw new UnsupportedOperationException("Método auxiliar para implementar");
+        return path == null ? Double.POSITIVE_INFINITY : path.size();
     }
-} 
+}
