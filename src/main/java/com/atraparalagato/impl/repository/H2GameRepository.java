@@ -2,195 +2,259 @@ package com.atraparalagato.impl.repository;
 
 import com.atraparalagato.base.repository.DataRepository;
 import com.atraparalagato.impl.model.HexGameState;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.List;
-import java.util.Optional;
+import java.sql.*;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
-/**
- * Implementación esqueleto de DataRepository usando base de datos H2.
- * 
- * Los estudiantes deben completar los métodos marcados con TODO.
- * 
- * Conceptos a implementar:
- * - Conexión a base de datos H2
- * - Operaciones CRUD con SQL
- * - Manejo de transacciones
- * - Mapeo objeto-relacional
- * - Consultas personalizadas
- * - Manejo de errores de BD
- */
 public class H2GameRepository extends DataRepository<HexGameState, String> {
-    
-    // TODO: Los estudiantes deben definir la configuración de la base de datos
-    // Ejemplos: DataSource, JdbcTemplate, EntityManager, etc.
-    
+
+    private static final String DB_URL = "jdbc:h2:./data/atraparalagato";
+    private static final String USER = "sa";
+    private static final String PASSWORD = "";
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private Connection connection;
+
     public H2GameRepository() {
-        // TODO: Inicializar conexión a H2 y crear tablas si no existen
-        // Pista: Usar spring.datasource.url configurado en application.properties
-        throw new UnsupportedOperationException("Los estudiantes deben implementar el constructor");
+        try {
+            connection = DriverManager.getConnection(DB_URL, USER, PASSWORD);
+            createSchema();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al conectar a la base de datos H2", e);
+        }
     }
-    
+
     @Override
     public HexGameState save(HexGameState entity) {
-        // TODO: Implementar guardado en base de datos H2
-        // Considerar:
-        // 1. Validar entidad antes de guardar
-        // 2. Usar INSERT o UPDATE según si existe
-        // 3. Serializar el estado del juego
-        // 4. Manejar errores de BD
-        // 5. Llamar hooks beforeSave/afterSave
-        throw new UnsupportedOperationException("Los estudiantes deben implementar save");
+        String sqlInsert = "MERGE INTO games (id, state) VALUES (?, ?)";
+        try (PreparedStatement stmt = connection.prepareStatement(sqlInsert)) {
+            stmt.setString(1, entity.getGameId());
+            stmt.setString(2, serializeGameState(entity));
+            stmt.executeUpdate();
+            return entity;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al guardar el juego", e);
+        }
     }
-    
+
     @Override
     public Optional<HexGameState> findById(String id) {
-        // TODO: Buscar juego por ID en la base de datos
-        // 1. Ejecutar consulta SQL SELECT
-        // 2. Mapear resultado a HexGameState
-        // 3. Deserializar estado del juego
-        // 4. Retornar Optional.empty() si no existe
-        throw new UnsupportedOperationException("Los estudiantes deben implementar findById");
+        String sql = "SELECT state FROM games WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                String stateJson = rs.getString("state");
+                return Optional.of(deserializeGameState(stateJson, id));
+            }
+            return Optional.empty();
+        } catch (Exception e) {
+            throw new RuntimeException("Error al buscar el juego", e);
+        }
     }
-    
+
     @Override
     public List<HexGameState> findAll() {
-        // TODO: Obtener todos los juegos de la base de datos
-        // Considerar paginación para grandes volúmenes de datos
-        throw new UnsupportedOperationException("Los estudiantes deben implementar findAll");
+        String sql = "SELECT id, state FROM games";
+        List<HexGameState> result = new ArrayList<>();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                String id = rs.getString("id");
+                String stateJson = rs.getString("state");
+                result.add(deserializeGameState(stateJson, id));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error al obtener todos los juegos", e);
+        }
+        return result;
     }
-    
+
     @Override
     public List<HexGameState> findWhere(Predicate<HexGameState> condition) {
-        // TODO: Implementar búsqueda con condiciones
-        // Opciones:
-        // 1. Cargar todos y filtrar en memoria (simple pero ineficiente)
-        // 2. Convertir Predicate a SQL WHERE (avanzado)
-        // 3. Usar consultas predefinidas para casos comunes
-        throw new UnsupportedOperationException("Los estudiantes deben implementar findWhere");
+        // Simple: cargar todos y filtrar en memoria
+        return findAll().stream().filter(condition).collect(Collectors.toList());
     }
-    
+
     @Override
-    public <R> List<R> findAndTransform(Predicate<HexGameState> condition, 
-                                       Function<HexGameState, R> transformer) {
-        // TODO: Buscar y transformar en una operación
-        // Puede optimizarse para hacer la transformación en SQL
-        throw new UnsupportedOperationException("Los estudiantes deben implementar findAndTransform");
+    public <R> List<R> findAndTransform(Predicate<HexGameState> condition, Function<HexGameState, R> transformer) {
+        return findAll().stream().filter(condition).map(transformer).collect(Collectors.toList());
     }
-    
+
     @Override
     public long countWhere(Predicate<HexGameState> condition) {
-        // TODO: Contar registros que cumplen condición
-        // Preferiblemente usar COUNT(*) en SQL para eficiencia
-        throw new UnsupportedOperationException("Los estudiantes deben implementar countWhere");
+        return findWhere(condition).size();
     }
-    
+
     @Override
     public boolean deleteById(String id) {
-        // TODO: Eliminar juego por ID
-        // Retornar true si se eliminó, false si no existía
-        throw new UnsupportedOperationException("Los estudiantes deben implementar deleteById");
+        String sql = "DELETE FROM games WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al eliminar el juego", e);
+        }
     }
-    
+
     @Override
     public long deleteWhere(Predicate<HexGameState> condition) {
-        // TODO: Eliminar múltiples registros según condición
-        // Retornar número de registros eliminados
-        throw new UnsupportedOperationException("Los estudiantes deben implementar deleteWhere");
+        List<HexGameState> toDelete = findWhere(condition);
+        long count = 0;
+        for (HexGameState state : toDelete) {
+            if (deleteById(state.getGameId())) count++;
+        }
+        return count;
     }
-    
+
     @Override
     public boolean existsById(String id) {
-        // TODO: Verificar si existe un juego con el ID dado
-        // Usar SELECT COUNT(*) para eficiencia
-        throw new UnsupportedOperationException("Los estudiantes deben implementar existsById");
+        String sql = "SELECT COUNT(*) FROM games WHERE id = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+            return false;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al verificar existencia", e);
+        }
     }
-    
+
     @Override
     public <R> R executeInTransaction(Function<DataRepository<HexGameState, String>, R> operation) {
-        // TODO: Ejecutar operación en transacción
-        // 1. Iniciar transacción
-        // 2. Ejecutar operación
-        // 3. Commit si exitoso, rollback si error
-        // 4. Manejar excepciones apropiadamente
-        throw new UnsupportedOperationException("Los estudiantes deben implementar executeInTransaction");
+        try {
+            connection.setAutoCommit(false);
+            R result = operation.apply(this);
+            connection.commit();
+            connection.setAutoCommit(true);
+            return result;
+        } catch (Exception e) {
+            try { connection.rollback(); } catch (SQLException ignored) {}
+            throw new RuntimeException("Error en transacción", e);
+        }
     }
-    
+
     @Override
     public List<HexGameState> findWithPagination(int page, int size) {
-        // TODO: Implementar paginación con LIMIT y OFFSET
-        // Validar parámetros de entrada
-        throw new UnsupportedOperationException("Los estudiantes deben implementar findWithPagination");
+        String sql = "SELECT id, state FROM games LIMIT ? OFFSET ?";
+        List<HexGameState> result = new ArrayList<>();
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, size);
+            stmt.setInt(2, page * size);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                String id = rs.getString("id");
+                String stateJson = rs.getString("state");
+                result.add(deserializeGameState(stateJson, id));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error en paginación", e);
+        }
+        return result;
     }
-    
+
     @Override
-    public List<HexGameState> findAllSorted(Function<HexGameState, ? extends Comparable<?>> sortKeyExtractor, 
-                                           boolean ascending) {
-        // TODO: Implementar ordenamiento
-        // Convertir sortKeyExtractor a ORDER BY SQL
-        throw new UnsupportedOperationException("Los estudiantes deben implementar findAllSorted");
+    public List<HexGameState> findAllSorted(Function<HexGameState, ? extends Comparable<?>> sortKeyExtractor, boolean ascending) {
+        // Simple: cargar todos y ordenar en memoria
+        Comparator<HexGameState> comparator = Comparator.comparing(sortKeyExtractor);
+        if (!ascending) comparator = comparator.reversed();
+        return findAll().stream().sorted(comparator).collect(Collectors.toList());
     }
-    
+
     @Override
     public <R> List<R> executeCustomQuery(String query, Function<Object, R> resultMapper) {
-        // TODO: Ejecutar consulta SQL personalizada
-        // 1. Validar consulta SQL
-        // 2. Ejecutar consulta
-        // 3. Mapear resultados usando resultMapper
-        // 4. Manejar errores SQL
-        throw new UnsupportedOperationException("Los estudiantes deben implementar executeCustomQuery");
+        List<R> results = new ArrayList<>();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            while (rs.next()) {
+                results.add(resultMapper.apply(rs.getObject(1)));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error en consulta personalizada", e);
+        }
+        return results;
     }
-    
+
     @Override
     protected void initialize() {
-        // TODO: Inicializar base de datos
-        // 1. Crear tablas si no existen
-        // 2. Configurar índices
-        // 3. Insertar datos de prueba si es necesario
-        throw new UnsupportedOperationException("Los estudiantes deben implementar initialize");
+        createSchema();
     }
-    
+
     @Override
     protected void cleanup() {
-        // TODO: Limpiar recursos
-        // 1. Cerrar conexiones
-        // 2. Limpiar cache si existe
-        // 3. Liberar recursos
-        throw new UnsupportedOperationException("Los estudiantes deben implementar cleanup");
+        try {
+            if (connection != null && !connection.isClosed()) connection.close();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al cerrar la conexión", e);
+        }
     }
-    
-    // Métodos auxiliares que los estudiantes pueden implementar
-    
-    /**
-     * TODO: Crear el esquema de la base de datos.
-     * Definir tablas, columnas, tipos de datos, restricciones.
-     */
+
+    // --- Métodos auxiliares ---
+
     private void createSchema() {
-        throw new UnsupportedOperationException("Método auxiliar para implementar");
+        String sql = "CREATE TABLE IF NOT EXISTS games (" +
+                "id VARCHAR(64) PRIMARY KEY, " +
+                "state CLOB NOT NULL" +
+                ")";
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(sql);
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al crear el esquema", e);
+        }
     }
-    
-    /**
-     * TODO: Serializar HexGameState a formato de BD.
-     * Puede usar JSON, XML, o campos separados.
-     */
+
     private String serializeGameState(HexGameState gameState) {
-        throw new UnsupportedOperationException("Método auxiliar para implementar");
+        try {
+            return objectMapper.writeValueAsString(gameState.getSerializableState());
+        } catch (Exception e) {
+            throw new RuntimeException("Error al serializar el estado del juego", e);
+        }
     }
-    
-    /**
-     * TODO: Deserializar desde formato de BD a HexGameState.
-     * Debe ser compatible con serializeGameState.
-     */
+
     private HexGameState deserializeGameState(String serializedData, String gameId) {
-        throw new UnsupportedOperationException("Método auxiliar para implementar");
+        try {
+            Map<String, Object> state = objectMapper.readValue(serializedData, Map.class);
+            HexGameState gameState = new HexGameState(gameId, (int) state.get("boardSize"));
+            gameState.restoreFromSerializable(state);
+            return gameState;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al deserializar el estado del juego", e);
+        }
     }
-    
+
     /**
-     * TODO: Convertir Predicate a cláusula WHERE SQL.
-     * Implementación avanzada opcional.
+     * Obtiene estadísticas del repositorio.
      */
-    private String predicateToSql(Predicate<HexGameState> predicate) {
-        throw new UnsupportedOperationException("Método auxiliar avanzado para implementar");
+    public Map<String, Object> getRepositoryStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+
+        long totalGames = countWhere(game -> true);
+        long finishedGames = countWhere(HexGameState::isGameFinished);
+        long wonGames = countWhere(HexGameState::hasPlayerWon);
+
+        stats.put("totalGames", totalGames);
+        stats.put("finishedGames", finishedGames);
+        stats.put("wonGames", wonGames);
+        stats.put("inProgressGames", totalGames - finishedGames);
+        stats.put("winRate", totalGames > 0 ? (double) wonGames / totalGames * 100 : 0);
+
+        return stats;
     }
-} 
+
+    /**
+     * Limpia juegos antiguos (ejemplo de operación de mantenimiento).
+     */
+    public long cleanupOldGames(long maxAgeMillis) {
+        long currentTime = System.currentTimeMillis();
+
+        return deleteWhere(game -> {
+            long gameTime = game.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            return currentTime - gameTime > maxAgeMillis;
+        });
+    }
+}

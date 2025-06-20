@@ -97,4 +97,8 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         // Ejemplo: System.out.println("Movimiento ejecutado en: " + position);
         super.onMoveExecuted(position);
     }
+
+    public Set<HexPosition> getBlockedPositions() {
+        return new HashSet<>(blockedPositions);
+    }
 }

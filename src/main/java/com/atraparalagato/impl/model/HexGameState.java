@@ -88,7 +88,7 @@ public class HexGameState extends GameState<HexPosition> {
         Map<String, Object> state = new HashMap<>();
         state.put("gameId", getGameId());
         state.put("catPosition", Map.of("q", catPosition.getQ(), "r", catPosition.getR()));
-        state.put("blockedCells", gameBoard.blockedPositions);
+        state.put("blockedCells", gameBoard.getBlockedPositions());
         state.put("status", getStatus().toString());
         state.put("moveCount", getMoveCount());
         state.put("boardSize", boardSize);
