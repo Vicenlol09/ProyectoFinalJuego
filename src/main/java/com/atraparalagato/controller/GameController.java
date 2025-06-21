@@ -22,8 +22,8 @@ import java.util.Optional;
 @CrossOrigin(origins = "*")
 public class GameController {
     
-    @Value("${game.use-example-implementation:true}")
-    private boolean useExampleImplementation;
+    @Value("${game.use-example-implementation:false}")
+    private boolean useExampleImplementation = false; // Por defecto, usa implementación de estudiantes
     
     private final ExampleGameService exampleGameService;
     

@@ -1,8 +1,6 @@
 package com.atraparalagato.impl.model;
 
 import com.atraparalagato.base.model.GameBoard;
-import com.atraparalagato.impl.model.HexPosition;
-
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -90,7 +88,6 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         List<HexPosition> positions = new ArrayList<>();
         for (int q = -size; q <= size; q++) {
             for (int r = -size; r <= size; r++) {
-                int s = -q - r;
                 HexPosition pos = new HexPosition(q, r);
                 if (isPositionInBounds(pos)) {
                     positions.add(pos);
@@ -108,7 +105,7 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         super.onMoveExecuted(position);
     }
 
-    @Override
+    
     public Set<HexPosition> getBlockedPositionsview() {
         return Collections.unmodifiableSet(blockedPositions);
     }

@@ -4,6 +4,7 @@ import com.atraparalagato.base.repository.DataRepository;
 import com.atraparalagato.impl.model.HexGameState;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+
 import java.sql.*;
 import java.util.*;
 import java.util.function.Function;
@@ -162,7 +163,7 @@ public class H2GameRepository extends DataRepository<HexGameState, String> {
     @Override
     public List<HexGameState> findAllSorted(Function<HexGameState, ? extends Comparable<?>> sortKeyExtractor, boolean ascending) {
         Comparator<HexGameState> comparator = Comparator.comparing(
-            (HexGameState g) -> sortKeyExtractor.apply(g),
+            h -> (Comparable) sortKeyExtractor.apply(h),
             Comparator.nullsLast(Comparator.naturalOrder())
         );
         if (!ascending) comparator = comparator.reversed();
