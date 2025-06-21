@@ -1,6 +1,8 @@
 package com.atraparalagato.impl.model;
 
 import com.atraparalagato.base.model.GameBoard;
+import com.atraparalagato.impl.model.HexPosition;
+
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -11,51 +13,55 @@ import java.util.stream.Collectors;
  */
 public class HexGameBoard extends GameBoard<HexPosition> {
 
+    // POSICIONES VÁLIDAS DEL TABLERO (CONSULTAS RÁPIDAS)
+    private final Set<HexPosition> validPositions; 
+
     public HexGameBoard(int size) {
         super(size);
+        this.validPositions = new HashSet<>(getAllPossiblePositions()); 
     }
 
+
+    // Usamos HashSet por eficiencia y para evitar duplicados
     @Override
     protected Set<HexPosition> initializeBlockedPositions() {
-        // Usamos HashSet por eficiencia y para evitar duplicados
+        
         return new HashSet<>();
     }
 
+    // VER SI ESTÁ DENTRO DE LOS LÍMITES CON EL SET PRECALCULADO
     @Override
-    protected boolean isPositionInBounds(HexPosition position) {
-        // Valida que la posición esté dentro de los límites hexagonales
-        int q = position.getQ();
-        int r = position.getR();
-        int s = position.getS();
-        return Math.abs(q) <= size && Math.abs(r) <= size && Math.abs(s) <= size;
+    protected boolean isPositionInBounds(HexPosition position) { 
+        return validPositions.contains(position);
     }
 
+    // Es válido si está dentro de los límites y no está bloqueado
     @Override
     protected boolean isValidMove(HexPosition position) {
-        // Es válido si está dentro de los límites y no está bloqueado
         return isPositionInBounds(position) && !isBlocked(position);
     }
 
+    // EJECUTA MOVIMIENTO BLOQUEANDO LA POSICIÓN
     @Override
     protected void executeMove(HexPosition position) {
-        // Agrega la posición a las bloqueadas si es válida
-        if (isValidMove(position)) {
-            blockedPositions.add(position);
-            onMoveExecuted(position);
+        if (!isValidMove(position)) {
+            throw new IllegalArgumentException("Movimiento inválido: " + position);
         }
+        blockedPositions.add(position);//AÑADE LA POSICIÓN A LAS BLOQUEADAS
+        onMoveExecuted(position); // Llamada al hook para lógica adicional tras el movimiento
     }
 
+    //LISTA DE POSICIONES QUE CUMPLEN LA CONDICIÓN DADA
     @Override
     public List<HexPosition> getPositionsWhere(Predicate<HexPosition> condition) {
-        // Genera todas las posiciones posibles y filtra por el Predicate
-        return getAllPossiblePositions().stream()
+        return validPositions.stream()
                 .filter(condition)
                 .collect(Collectors.toList());
     }
 
+    //DEVUELVE LAS POSICIONES ADYACENTES DENTRO DEL TABLERO QUE NO ESTÁN BLOQUEADAS
     @Override
     public List<HexPosition> getAdjacentPositions(HexPosition position) {
-        // Direcciones hexagonales
         HexPosition[] directions = {
             new HexPosition(1, 0),
             new HexPosition(1, -1),
@@ -67,16 +73,19 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         return Arrays.stream(directions)
                 .map(dir -> (HexPosition) position.add(dir))
                 .filter(this::isPositionInBounds)
+                .filter(pos -> !isBlocked(pos))
                 .collect(Collectors.toList());
     }
 
+    //VERIFICA SI UNA POSICIÓN ESTÁ BLOQUEADA
     @Override
     public boolean isBlocked(HexPosition position) {
         // Consulta simple en el conjunto de bloqueadas
         return blockedPositions.contains(position);
     }
 
-    // Método auxiliar para generar todas las posiciones válidas del tablero
+
+    //GENERA TODAS LAS POSICIONES POSIBLES DEL TABLERO
     private List<HexPosition> getAllPossiblePositions() {
         List<HexPosition> positions = new ArrayList<>();
         for (int q = -size; q <= size; q++) {
@@ -91,6 +100,7 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         return positions;
     }
 
+    
     @Override
     protected void onMoveExecuted(HexPosition position) {
         // Hook para lógica adicional tras un movimiento
@@ -98,7 +108,8 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         super.onMoveExecuted(position);
     }
 
-    public Set<HexPosition> getBlockedPositions() {
-        return new HashSet<>(blockedPositions);
+    @Override
+    public Set<HexPosition> getBlockedPositionsview() {
+        return Collections.unmodifiableSet(blockedPositions);
     }
 }

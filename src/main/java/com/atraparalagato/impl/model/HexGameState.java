@@ -5,6 +5,7 @@ import com.atraparalagato.base.model.GameState;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Implementación de GameState para tableros hexagonales.
@@ -17,12 +18,14 @@ public class HexGameState extends GameState<HexPosition> {
     private final HexGameBoard gameBoard;
     private final int boardSize;
 
+    // Constructor que inicializa el estado del juego con un ID y tamaño de tablero
     public HexGameState(String gameId, int boardSize) {
         super(gameId);
         this.boardSize = boardSize;
         this.gameBoard = new HexGameBoard(boardSize);
         this.catPosition = new HexPosition(0, 0); // Gato inicia en el centro
     }
+
 
     @Override
     protected boolean canExecuteMove(HexPosition position) {
@@ -48,8 +51,10 @@ public class HexGameState extends GameState<HexPosition> {
             setStatus(GameStatus.PLAYER_LOST); // El gato escapó
         } else if (isCatTrapped()) {
             setStatus(GameStatus.PLAYER_WON); // El gato está atrapado
+        } else if (getMoveCount() >= boardSize * 3) {
+            setStatus(GameStatus.DRAW); // Empate por demasiados movimientos
         }
-        // Si no, el juego sigue en progreso
+    // Puedes agregar más condiciones aquí
     }
 
     @Override
@@ -75,14 +80,25 @@ public class HexGameState extends GameState<HexPosition> {
 
     @Override
     public int calculateScore() {
-        // Sistema de puntuación simple
+        int baseScore = 0;
         if (hasPlayerWon()) {
-            return Math.max(0, 1000 - getMoveCount() * 10 + boardSize * 50);
+            baseScore = 1000 + (boardSize * 50);
+            // Bonificación por rapidez
+            baseScore += Math.max(0, 500 - getMoveCount() * 15);
+            // Bonificación si el gato está rodeado por más de 3 bloqueos
+            List<HexPosition> adj = gameBoard.getAdjacentPositions(catPosition);
+            long blockedAdj = adj.stream().filter(gameBoard::isBlocked).count();
+            if (blockedAdj >= 4) baseScore += 100;
+        } else if (getStatus() == GameStatus.DRAW) {
+            baseScore = 200;
         } else {
-            return Math.max(0, 100 - getMoveCount() * 5);
+            // Penalización por perder
+            baseScore = Math.max(0, 100 - getMoveCount() * 5);
         }
+        return baseScore;
     }
 
+    
     @Override
     public Object getSerializableState() {
         Map<String, Object> state = new HashMap<>();
@@ -95,25 +111,37 @@ public class HexGameState extends GameState<HexPosition> {
         return state;
     }
 
+
     @Override
     public void restoreFromSerializable(Object serializedState) {
-        if (serializedState instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> state = (Map<String, Object>) serializedState;
+    if (serializedState instanceof Map) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> state = (Map<String, Object>) serializedState;
 
-            @SuppressWarnings("unchecked")
-            Map<String, Integer> catPos = (Map<String, Integer>) state.get("catPosition");
-            if (catPos != null) {
-                this.catPosition = new HexPosition(catPos.get("q"), catPos.get("r"));
-            }
+        @SuppressWarnings("unchecked")
+        Map<String, Integer> catPos = (Map<String, Integer>) state.get("catPosition");
+        if (catPos != null) {
+            this.catPosition = new HexPosition(catPos.get("q"), catPos.get("r"));
+        }
 
-            String statusStr = (String) state.get("status");
-            if (statusStr != null) {
-                setStatus(GameStatus.valueOf(statusStr));
-            }
+        String statusStr = (String) state.get("status");
+        if (statusStr != null) {
+            setStatus(GameStatus.valueOf(statusStr));
+        }
+
+        // Restaurar celdas bloqueadas
+        @SuppressWarnings("unchecked")
+        Set<HexPosition> blocked = (Set<HexPosition>) state.get("blockedCells");
+        if (blocked != null) {
+            gameBoard.getBlockedPositions().clear();
+            gameBoard.getBlockedPositions().addAll(blocked);
+        }
+
+        Integer moveCount = (Integer) state.get("moveCount");
+        if (moveCount != null) {
         }
     }
-
+}
     // Métodos auxiliares privados
     private boolean isCatAtBorder() {
         // El gato escapa si llega al borde

@@ -162,7 +162,7 @@ public abstract class GameState<T extends Position> {
         return status;
     }
     
-    public final int getMoveCount() {
+    public int getMoveCount() {
         return moveCount;
     }
     
