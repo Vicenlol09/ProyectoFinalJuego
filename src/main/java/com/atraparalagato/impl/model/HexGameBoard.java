@@ -11,25 +11,26 @@ import java.util.stream.Collectors;
  */
 public class HexGameBoard extends GameBoard<HexPosition> {
 
-    // POSICIONES VÁLIDAS DEL TABLERO (CONSULTAS RÁPIDAS)
-    private final Set<HexPosition> validPositions; 
+    private final Set<HexPosition> validPositions;
+    private final int mySize;
+    private final Set<HexPosition> myBlockedPositions;
 
     public HexGameBoard(int size) {
         super(size);
-        this.validPositions = new HashSet<>(getAllPossiblePositions()); 
+        this.mySize = size;
+        this.validPositions = new HashSet<>(getAllPossiblePositions());
+        this.myBlockedPositions = new HashSet<>();
     }
-
 
     // Usamos HashSet por eficiencia y para evitar duplicados
     @Override
     protected Set<HexPosition> initializeBlockedPositions() {
-        
         return new HashSet<>();
     }
 
     // VER SI ESTÁ DENTRO DE LOS LÍMITES CON EL SET PRECALCULADO
     @Override
-    protected boolean isPositionInBounds(HexPosition position) { 
+    protected boolean isPositionInBounds(HexPosition position) {
         return validPositions.contains(position);
     }
 
@@ -45,8 +46,8 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         if (!isValidMove(position)) {
             throw new IllegalArgumentException("Movimiento inválido: " + position);
         }
-        blockedPositions.add(position);//AÑADE LA POSICIÓN A LAS BLOQUEADAS
-        onMoveExecuted(position); // Llamada al hook para lógica adicional tras el movimiento
+        myBlockedPositions.add(position);
+        onMoveExecuted(position);
     }
 
     //LISTA DE POSICIONES QUE CUMPLEN LA CONDICIÓN DADA
@@ -78,18 +79,17 @@ public class HexGameBoard extends GameBoard<HexPosition> {
     //VERIFICA SI UNA POSICIÓN ESTÁ BLOQUEADA
     @Override
     public boolean isBlocked(HexPosition position) {
-        // Consulta simple en el conjunto de bloqueadas
-        return blockedPositions.contains(position);
+        return myBlockedPositions.contains(position);
     }
-
 
     //GENERA TODAS LAS POSICIONES POSIBLES DEL TABLERO
     private List<HexPosition> getAllPossiblePositions() {
         List<HexPosition> positions = new ArrayList<>();
-        for (int q = -size; q <= size; q++) {
-            for (int r = -size; r <= size; r++) {
+        for (int q = -mySize; q <= mySize; q++) {
+            for (int r = -mySize; r <= mySize; r++) {
+                int s = -q - r;
                 HexPosition pos = new HexPosition(q, r);
-                if (isPositionInBounds(pos)) {
+                if (Math.abs(q) <= mySize && Math.abs(r) <= mySize && Math.abs(s) <= mySize) {
                     positions.add(pos);
                 }
             }
@@ -97,16 +97,34 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         return positions;
     }
 
-    
     @Override
     protected void onMoveExecuted(HexPosition position) {
-        // Hook para lógica adicional tras un movimiento
-        // Ejemplo: System.out.println("Movimiento ejecutado en: " + position);
         super.onMoveExecuted(position);
     }
 
-    
-    public Set<HexPosition> getBlockedPositionsview() {
-        return Collections.unmodifiableSet(blockedPositions);
+    // === Métodos auxiliares para compatibilidad con HexGameService ===
+
+    // Devuelve una copia de las posiciones bloqueadas (no sobrescribe ningún método final)
+    public Set<HexPosition> getBlockedHexPositions() {
+        return new HashSet<>(myBlockedPositions);
+    }
+
+    public void blockPosition(HexPosition pos) {
+        myBlockedPositions.add(pos);
+    }
+
+    public List<HexPosition> getAllAvailablePositions() {
+        return validPositions.stream().filter(pos -> !isBlocked(pos)).collect(Collectors.toList());
+    }
+
+    public List<HexPosition> getAllBorderPositions() {
+        List<HexPosition> borders = new ArrayList<>();
+        for (HexPosition pos : validPositions) {
+            int s = pos.getS();
+            if (Math.abs(pos.getQ()) == mySize || Math.abs(pos.getR()) == mySize || Math.abs(s) == mySize) {
+                borders.add(pos);
+            }
+        }
+        return borders;
     }
 }

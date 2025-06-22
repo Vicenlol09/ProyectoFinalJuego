@@ -257,7 +257,7 @@ public class H2GameRepository extends DataRepository<HexGameState, String> {
         long currentTime = System.currentTimeMillis();
 
         return deleteWhere(game -> {
-            long gameTime = game.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            long gameTime = game.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
             return currentTime - gameTime > maxAgeMillis;
         });
     }
