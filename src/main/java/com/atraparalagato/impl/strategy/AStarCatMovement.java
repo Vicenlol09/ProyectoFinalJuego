@@ -16,7 +16,7 @@ public class AStarCatMovement extends CatMovementStrategy<HexPosition> {
     }
 
     @Override
-    protected List<HexPosition> getPossibleMoves(HexPosition currentPosition) {
+    public List<HexPosition> getPossibleMoves(HexPosition currentPosition) {
         // Devuelve las posiciones adyacentes no bloqueadas
         return board.getAdjacentPositions(currentPosition).stream()
                 .filter(pos -> !board.isBlocked(pos))
@@ -24,7 +24,7 @@ public class AStarCatMovement extends CatMovementStrategy<HexPosition> {
     }
 
     @Override
-    protected Optional<HexPosition> selectBestMove(List<HexPosition> possibleMoves,
+    public Optional<HexPosition> selectBestMove(List<HexPosition> possibleMoves,
                                                   HexPosition currentPosition,
                                                   HexPosition targetPosition) {
         if (possibleMoves.isEmpty()) return Optional.empty();

@@ -123,7 +123,7 @@ button:hover {
     position: absolute;
     width: 40px;
     height: 46px;
-    background: linear-gradient(135deg, #232526, #414345);
+    background: linear-gradient(135deg, #b3e5fc, #e1f5fe);
     border: 1px solid #444;
     cursor: pointer;
     transition: all 0.3s ease;

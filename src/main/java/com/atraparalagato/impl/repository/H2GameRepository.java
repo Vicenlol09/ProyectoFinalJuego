@@ -3,14 +3,13 @@ package com.atraparalagato.impl.repository;
 import com.atraparalagato.base.repository.DataRepository;
 import com.atraparalagato.impl.model.HexGameState;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.sql.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.time.ZoneId;
 
 public class H2GameRepository extends DataRepository<HexGameState, String> {
 
@@ -222,8 +221,19 @@ public class H2GameRepository extends DataRepository<HexGameState, String> {
 
     private HexGameState deserializeGameState(String serializedData, String gameId) {
         try {
-            Map<String, Object> state = objectMapper.readValue(serializedData, Map.class);
-            HexGameState gameState = new HexGameState(gameId, (int) state.get("boardSize"));
+            Map<String, Object> state = objectMapper.readValue(
+                serializedData, new TypeReference<Map<String, Object>>() {}
+            );
+            int boardSize = 0;
+            Object boardSizeObj = state.get("boardSize");
+            if (boardSizeObj instanceof Integer) {
+                boardSize = (Integer) boardSizeObj;
+            } else if (boardSizeObj instanceof Double) {
+                boardSize = ((Double) boardSizeObj).intValue();
+            } else if (boardSizeObj instanceof String) {
+                boardSize = Integer.parseInt((String) boardSizeObj);
+            }
+            HexGameState gameState = new HexGameState(gameId, boardSize);
             gameState.restoreFromSerializable(state);
             return gameState;
         } catch (Exception e) {
@@ -250,15 +260,12 @@ public class H2GameRepository extends DataRepository<HexGameState, String> {
         return stats;
     }
 
-    /**
-     * Limpia juegos antiguos (ejemplo de operación de mantenimiento).
-     */
-    public long cleanupOldGames(long maxAgeMillis) {
-        long currentTime = System.currentTimeMillis();
+   public long cleanupOldGames(long maxAgeMillis) {
+    long currentTime = System.currentTimeMillis();
 
-        return deleteWhere(game -> {
-            long gameTime = game.getCreatedAt().toInstant().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-            return currentTime - gameTime > maxAgeMillis;
-        });
-    }
+    return deleteWhere(game -> {
+        long gameTime = game.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        return currentTime - gameTime > maxAgeMillis;
+    });
+}
 }

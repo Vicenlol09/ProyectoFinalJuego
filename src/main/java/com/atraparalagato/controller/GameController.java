@@ -206,7 +206,6 @@ public class GameController {
     // Métodos privados para implementación de estudiantes (placeholder)
     
     private ResponseEntity<Map<String, Object>> startGameWithStudentImplementation(int boardSize) {
-        // TODO: Los estudiantes deben implementar esto usando sus propias clases
         return ResponseEntity.ok(Map.of(
             "error", "Student implementation not available yet",
             "message", "Los estudiantes deben completar sus implementaciones en el paquete 'impl'",
@@ -215,7 +214,6 @@ public class GameController {
     }
     
     private ResponseEntity<Map<String, Object>> blockPositionWithStudentImplementation(String gameId, HexPosition position) {
-        // TODO: Los estudiantes deben implementar esto usando sus propias clases
         return ResponseEntity.ok(Map.of(
             "error", "Student implementation not available yet",
             "message", "Los estudiantes deben completar sus implementaciones en el paquete 'impl'",
@@ -224,7 +222,6 @@ public class GameController {
     }
     
     private ResponseEntity<Map<String, Object>> getGameStateWithStudentImplementation(String gameId) {
-        // TODO: Los estudiantes deben implementar esto usando sus propias clases
         return ResponseEntity.ok(Map.of(
             "error", "Student implementation not available yet",
             "message", "Los estudiantes deben completar sus implementaciones en el paquete 'impl'",

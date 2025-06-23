@@ -15,7 +15,7 @@ public class BFSCatMovement extends CatMovementStrategy<HexPosition> {
     }
 
     @Override
-    protected List<HexPosition> getPossibleMoves(HexPosition currentPosition) {
+    public List<HexPosition> getPossibleMoves(HexPosition currentPosition) {
         // Devuelve las posiciones adyacentes no bloqueadas
         return board.getAdjacentPositions(currentPosition).stream()
                 .filter(pos -> !board.isBlocked(pos))
@@ -23,7 +23,7 @@ public class BFSCatMovement extends CatMovementStrategy<HexPosition> {
     }
 
     @Override
-    protected Optional<HexPosition> selectBestMove(List<HexPosition> possibleMoves,
+    public Optional<HexPosition> selectBestMove(List<HexPosition> possibleMoves,
                                                   HexPosition currentPosition,
                                                   HexPosition targetPosition) {
         if (possibleMoves.isEmpty()) return Optional.empty();
@@ -137,10 +137,5 @@ public class BFSCatMovement extends CatMovementStrategy<HexPosition> {
             path.add(0, start);
         }
         return path;
-    }
-
-    // Evalúa la calidad de un camino (menor longitud es mejor)
-    private double evaluatePathQuality(List<HexPosition> path) {
-        return path == null ? Double.POSITIVE_INFINITY : path.size();
     }
 }

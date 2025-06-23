@@ -3,8 +3,8 @@ package com.atraparalagato.impl.model;
 import com.atraparalagato.base.model.GameState;
 import com.atraparalagato.base.strategy.CatMovementStrategy;
 
+import java.time.Instant;
 import java.util.*;
-
 
 /**
  * Implementación de GameState para tableros hexagonales.
@@ -24,7 +24,7 @@ public class HexGameState extends GameState<HexPosition> {
     private String winner;
     private String playerId;
     private final List<Map<String, Object>> moveHistory = new ArrayList<>();
-    private Date createdAt = new Date();
+    private final long createdAt = System.currentTimeMillis();
 
     // Constructor que inicializa el estado del juego con un ID y tamaño de tablero
     public HexGameState(String gameId, int boardSize) {
@@ -120,10 +120,11 @@ public class HexGameState extends GameState<HexPosition> {
         Map<String, Object> state = new HashMap<>();
         state.put("gameId", getGameId());
         state.put("catPosition", Map.of("q", catPosition.getQ(), "r", catPosition.getR()));
-        state.put("blockedCells", gameBoard.getBlockedPositions());
+        state.put("blockedCells", gameBoard.getBlockedHexPositions());
         state.put("status", getStatus().toString());
         state.put("moveCount", getMoveCount());
         state.put("boardSize", boardSize);
+        state.put("createdAt", createdAt);
         return state;
     }
 
@@ -145,13 +146,26 @@ public class HexGameState extends GameState<HexPosition> {
                 setStatus(GameStatus.valueOf(statusStr));
             }
 
-            // Restaurar celdas bloqueadas
-            @SuppressWarnings("unchecked")
-            Set<HexPosition> blocked = (Set<HexPosition>) state.get("blockedCells");
-            if (blocked != null) {
-                gameBoard.getBlockedPositions().clear();
-                gameBoard.getBlockedPositions().addAll(blocked);
+            // Restaurar celdas bloqueadas (acepta Set<HexPosition> o List<Map>)
+            Object blockedObj = state.get("blockedCells");
+            Set<HexPosition> bloqueos = gameBoard.getBlockedHexPositions();
+            bloqueos.clear();
+            if (blockedObj instanceof Collection<?> blockedList) {
+                for (Object o : blockedList) {
+                    if (o instanceof HexPosition pos) {
+                        bloqueos.add(pos);
+                    } else if (o instanceof Map<?,?> map) {
+                        Object qObj = map.get("q");
+                        Object rObj = map.get("r");
+                        if (qObj instanceof Number q && rObj instanceof Number r) {
+                            bloqueos.add(new HexPosition(q.intValue(), r.intValue()));
+                        }
+                    }
+                }
             }
+            // Restaurar createdAt si existe (opcional, solo si necesitas leerlo)
+            // Object createdAtObj = state.get("createdAt");
+            // if (createdAtObj instanceof Number n) { ... }
         }
     }
 
@@ -173,7 +187,10 @@ public class HexGameState extends GameState<HexPosition> {
     // Métodos y getters para compatibilidad con HexGameService
 
     public HexGameBoard getBoard() { return gameBoard; }
-    public void setBoard(HexGameBoard board) { /* No-op, board es final */ }
+    public void setBoard(HexGameBoard board) {
+        // No cambia la referencia, pero puede copiar el estado si es necesario
+        // Por compatibilidad, no hace nada
+    }
     public int getBoardSize() { return boardSize; }
 
     public String getDifficulty() { return difficulty; }
@@ -190,7 +207,17 @@ public class HexGameState extends GameState<HexPosition> {
     public void setPlayerId(String playerId) { this.playerId = playerId; }
 
     public int getScore() { return calculateScore(); }
-    public Date getCreatedAt() { return createdAt; }
+
+    
+    // Si necesitas el valor Instant para comparar, puedes agregar:
+    public Instant getCreatedAtInstant() {
+        return Instant.ofEpochMilli(createdAt);
+    }
+
+    // Si necesitas el valor long para comparar, puedes agregar:
+    public long getCreatedAtMillis() {
+        return createdAt;
+    }
 
     // Historial de movimientos
     public void addMoveToHistory(HexPosition pos, String playerId) {
@@ -209,8 +236,17 @@ public class HexGameState extends GameState<HexPosition> {
         // Deshace el último movimiento realizado
         if (!moveHistory.isEmpty()) {
             Map<String, Object> last = moveHistory.remove(moveHistory.size() - 1);
-            HexPosition pos = (HexPosition) last.get("position");
-            gameBoard.getBlockedPositions().remove(pos);
+            Object posObj = last.get("position");
+            Set<HexPosition> bloqueos = gameBoard.getBlockedHexPositions();
+            if (posObj instanceof HexPosition pos) {
+                bloqueos.remove(pos);
+            } else if (posObj instanceof Map<?,?> map) {
+                Object qObj = map.get("q");
+                Object rObj = map.get("r");
+                if (qObj instanceof Number q && rObj instanceof Number r) {
+                    bloqueos.remove(new HexPosition(q.intValue(), r.intValue()));
+                }
+            }
             decrementMoveCount();
         }
     }
@@ -219,7 +255,6 @@ public class HexGameState extends GameState<HexPosition> {
     private void decrementMoveCount() {
         // Se asume que moveCount es gestionado en GameState y es protected
         if (getMoveCount() > 0) {
-            // Si moveCount es private en GameState, puede ser necesario agregar un setter protegido o ajustar esto
             try {
                 java.lang.reflect.Field moveCountField = GameState.class.getDeclaredField("moveCount");
                 moveCountField.setAccessible(true);

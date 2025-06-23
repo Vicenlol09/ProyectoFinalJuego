@@ -30,7 +30,7 @@ public class HexGameBoard extends GameBoard<HexPosition> {
 
     // VER SI ESTÁ DENTRO DE LOS LÍMITES CON EL SET PRECALCULADO
     @Override
-    protected boolean isPositionInBounds(HexPosition position) {
+    public boolean isPositionInBounds(HexPosition position) {
         return validPositions.contains(position);
     }
 
@@ -127,4 +127,6 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         }
         return borders;
     }
+
+    // Alias para compatibilidad con HexGameState y HexGameService
 }
