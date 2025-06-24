@@ -2,6 +2,7 @@ package com.atraparalagato.impl.model;
 
 import com.atraparalagato.base.model.GameState;
 import com.atraparalagato.base.strategy.CatMovementStrategy;
+import com.atraparalagato.impl.strategy.BFSCatMovement;
 
 import java.time.Instant;
 import java.util.*;
@@ -32,6 +33,10 @@ public class HexGameState extends GameState<HexPosition> {
         this.boardSize = boardSize;
         this.gameBoard = new HexGameBoard(boardSize);
         this.catPosition = new HexPosition(0, 0); // El gato inicia en el centro
+    }
+
+    public void setGameStatus(GameStatus status) {
+        super.setStatus(status);
     }
 
     @Override
@@ -141,33 +146,42 @@ public class HexGameState extends GameState<HexPosition> {
                 this.catPosition = new HexPosition(catPos.get("q"), catPos.get("r"));
             }
 
+            String difficulty = (String) state.get("difficulty");
+            if (difficulty != null) {
+                setDifficulty(difficulty);
+                setCatMovementStrategy(new BFSCatMovement(gameBoard)); 
+            }
+
             String statusStr = (String) state.get("status");
             if (statusStr != null) {
                 setStatus(GameStatus.valueOf(statusStr));
             }
 
             // Restaurar celdas bloqueadas (acepta Set<HexPosition> o List<Map>)
-            Object blockedObj = state.get("blockedCells");
-            Set<HexPosition> bloqueos = gameBoard.getBlockedHexPositions();
-            bloqueos.clear();
-            if (blockedObj instanceof Collection<?> blockedList) {
-                for (Object o : blockedList) {
-                    if (o instanceof HexPosition pos) {
-                        bloqueos.add(pos);
-                    } else if (o instanceof Map<?,?> map) {
-                        Object qObj = map.get("q");
-                        Object rObj = map.get("r");
-                        if (qObj instanceof Number q && rObj instanceof Number r) {
-                            bloqueos.add(new HexPosition(q.intValue(), r.intValue()));
-                        }
-                    }
+            // Reemplaza este bloque en restoreFromSerializable:
+Object blockedObj = state.get("blockedCells");
+if (blockedObj instanceof Collection<?> blockedList) {
+    // Limpia primero los bloqueos actuales
+    gameBoard.getBlockedHexPositions().clear(); // Si tienes un método para limpiar, mejor usa ese
+    for (Object o : blockedList) {
+        if (o instanceof HexPosition pos) {
+            gameBoard.blockPosition(pos);
+        } else if (o instanceof Map<?,?> map) {
+            Object qObj = map.get("q");
+            Object rObj = map.get("r");
+            if (qObj instanceof Number q && rObj instanceof Number r) {
+                gameBoard.blockPosition(new HexPosition(q.intValue(), r.intValue()));
+            }
+        }
+    }
+}
                 }
             }
             // Restaurar createdAt si existe (opcional, solo si necesitas leerlo)
             // Object createdAtObj = state.get("createdAt");
             // if (createdAtObj instanceof Number n) { ... }
-        }
-    }
+    
+    
 
     // Métodos auxiliares privados
 
@@ -185,6 +199,8 @@ public class HexGameState extends GameState<HexPosition> {
     }
 
     // Métodos y getters para compatibilidad con HexGameService
+
+    
 
     public HexGameBoard getBoard() { return gameBoard; }
     public void setBoard(HexGameBoard board) {
@@ -220,14 +236,20 @@ public class HexGameState extends GameState<HexPosition> {
     }
 
     // Historial de movimientos
+    @Override
+    public int getMoveCount() {
+        return super.getMoveCount();
+    }
+
     public void addMoveToHistory(HexPosition pos, String playerId) {
-        // Agrega un movimiento al historial
+        incrementMoveCount(); // Usa el método de la base
         Map<String, Object> move = new HashMap<>();
         move.put("position", pos);
         move.put("playerId", playerId);
         move.put("moveNumber", getMoveCount());
-        moveHistory.add(move);
+        moveHistory.add(move);  
     }
+    
     public List<Map<String, Object>> getMoveHistory() { return moveHistory; }
 
     // Deshacer movimiento
@@ -250,6 +272,14 @@ public class HexGameState extends GameState<HexPosition> {
             decrementMoveCount();
         }
     }
+
+    public void moveCat() {
+    if (catMovementStrategy != null) {
+        Optional<HexPosition> next = catMovementStrategy.findBestMove(catPosition, null);
+        next.ifPresent(this::setCatPosition);
+    }
+}
+
 
     // Decrementa el contador de movimientos (utilizado en undo)
     private void decrementMoveCount() {

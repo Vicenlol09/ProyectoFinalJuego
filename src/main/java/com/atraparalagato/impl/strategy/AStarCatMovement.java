@@ -2,6 +2,7 @@ package com.atraparalagato.impl.strategy;
 
 import com.atraparalagato.base.model.GameBoard;
 import com.atraparalagato.base.strategy.CatMovementStrategy;
+import com.atraparalagato.impl.model.HexGameBoard;
 import com.atraparalagato.impl.model.HexPosition;
 
 import java.util.*;
@@ -10,6 +11,16 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class AStarCatMovement extends CatMovementStrategy<HexPosition> {
+
+    
+    public Optional<HexPosition> getNextMove(HexGameBoard board, HexPosition catPosition) {
+    // Busca los posibles movimientos desde la posición actual
+        List<HexPosition> possibleMoves = board.getAdjacentPositions(catPosition).stream()
+                .filter(pos -> !board.isBlocked(pos))
+                .toList();
+    // Usa selectBestMove para elegir el mejor movimiento
+        return selectBestMove(possibleMoves, catPosition, null);
+    }
 
     public AStarCatMovement(GameBoard<HexPosition> board) {
         super(board);

@@ -2,6 +2,7 @@ package com.atraparalagato.impl.service;
 
 import com.atraparalagato.base.service.GameService;
 import com.atraparalagato.base.model.GameState;
+import com.atraparalagato.base.model.GameState.GameStatus;
 import com.atraparalagato.base.model.GameBoard;
 import com.atraparalagato.base.strategy.CatMovementStrategy;
 import com.atraparalagato.impl.model.HexPosition;
@@ -32,7 +33,7 @@ public class HexGameService extends GameService<HexPosition> {
             id -> new HexGameState(id, 11)
         );
     }
-
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public HexGameService(
         HexGameBoard board,
         CatMovementStrategy<HexPosition> movementStrategy,
@@ -44,7 +45,7 @@ public class HexGameService extends GameService<HexPosition> {
         super(
             board,
             movementStrategy,
-            (DataRepository<GameState<HexPosition>, String>) (DataRepository<?>) repository, // <-- cast seguro
+            (DataRepository) repository,
             idGenerator,
             boardFactory,
             gameStateFactory
@@ -76,15 +77,18 @@ public class HexGameService extends GameService<HexPosition> {
         if (optState.isEmpty()) return Optional.empty();
         HexGameState state = optState.get();
 
+    
         if (state.isGameFinished()) return Optional.of(state);
-        if (!isValidAdvancedMove(state, position, playerId)) return Optional.of(state);
-
         if (!state.getBoard().isPositionInBounds(position) || state.getBoard().isBlocked(position)) {
             return Optional.of(state);
         }
-        state.getBoard().blockPosition(position);
-        state.addMoveToHistory(position, playerId);
 
+        if (!isValidAdvancedMove(state, position, playerId)) return Optional.of(state);
+
+          state.getBoard().blockPosition(position);
+        state.addMoveToHistory(position, playerId);
+        
+        
         // Mover el gato usando la estrategia
         executeCatMove(state, state.getDifficulty());
 
@@ -191,6 +195,20 @@ public class HexGameService extends GameService<HexPosition> {
 
     // Métodos auxiliares
 
+    private boolean isCatTrapped(HexGameState gameState) {
+        HexPosition cat = gameState.getCatPosition();
+        List<HexPosition> adj = gameState.getBoard().getAdjacentPositions(cat);
+        return adj.isEmpty() || adj.stream().allMatch(gameState.getBoard()::isBlocked);
+    }
+
+    private boolean isCatAtBorder(HexGameState gameState) {
+        HexPosition cat = gameState.getCatPosition();
+        int size = gameState.getBoardSize();
+        int q = cat.getQ(), r = cat.getR(), s = cat.getS();
+        return Math.abs(q) == size || Math.abs(r) == size || Math.abs(s) == size;
+    }
+
+
     private boolean isValidAdvancedMove(HexGameState gameState, HexPosition position, String playerId) {
         return !gameState.getBoard().isBlocked(position)
                 && !gameState.isGameFinished()
@@ -202,6 +220,18 @@ public class HexGameService extends GameService<HexPosition> {
         HexPosition catPos = gameState.getCatPosition();
         List<HexPosition> possibleMoves;
         Optional<HexPosition> move;
+
+        // Después de mover el gato:
+    if (isCatTrapped(gameState)) {
+        gameState.setGameStatus(GameStatus.PLAYER_WON); // O el estado que corresponda
+    } else if (isCatAtBorder(gameState)) {
+        gameState.setGameStatus(GameStatus.PLAYER_LOST); // O el estado que corresponda
+    }
+
+        if (strategy == null) {
+        System.out.println("⚠️ catMovementStrategy es null, el gato no se moverá.");
+        return;
+    }
 
         if (strategy instanceof BFSCatMovement bfs) {
             possibleMoves = bfs.getPossibleMoves(catPos);

@@ -105,6 +105,7 @@ public class HexGameBoard extends GameBoard<HexPosition> {
     // === Métodos auxiliares para compatibilidad con HexGameService ===
 
     // Devuelve una copia de las posiciones bloqueadas (no sobrescribe ningún método final)
+   
     public Set<HexPosition> getBlockedHexPositions() {
         return new HashSet<>(myBlockedPositions);
     }
