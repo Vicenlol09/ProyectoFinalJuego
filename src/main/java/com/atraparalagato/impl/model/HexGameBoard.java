@@ -13,13 +13,11 @@ public class HexGameBoard extends GameBoard<HexPosition> {
 
     private final Set<HexPosition> validPositions;
     private final int mySize;
-    private final Set<HexPosition> myBlockedPositions;
 
     public HexGameBoard(int size) {
         super(size);
         this.mySize = size;
         this.validPositions = new HashSet<>(getAllPossiblePositions());
-        this.myBlockedPositions = new HashSet<>();
     }
 
     // Usamos HashSet por eficiencia y para evitar duplicados
@@ -42,12 +40,9 @@ public class HexGameBoard extends GameBoard<HexPosition> {
 
     // EJECUTA MOVIMIENTO BLOQUEANDO LA POSICIÓN
     @Override
-    protected void executeMove(HexPosition position) {
-        if (!isValidMove(position)) {
-            throw new IllegalArgumentException("Movimiento inválido: " + position);
-        }
-        myBlockedPositions.add(position);
-        onMoveExecuted(position);
+    public void executeMove(HexPosition position) {
+        blockPosition(position);
+        super.onMoveExecuted(position); // Esto incrementa el contador de la base
     }
 
     //LISTA DE POSICIONES QUE CUMPLEN LA CONDICIÓN DADA
@@ -79,7 +74,7 @@ public class HexGameBoard extends GameBoard<HexPosition> {
     //VERIFICA SI UNA POSICIÓN ESTÁ BLOQUEADA
     @Override
     public boolean isBlocked(HexPosition position) {
-        return myBlockedPositions.contains(position);
+        return blockedPositions.contains(position);
     }
 
     //GENERA TODAS LAS POSICIONES POSIBLES DEL TABLERO
@@ -107,11 +102,11 @@ public class HexGameBoard extends GameBoard<HexPosition> {
     // Devuelve una copia de las posiciones bloqueadas (no sobrescribe ningún método final)
    
     public Set<HexPosition> getBlockedHexPositions() {
-        return new HashSet<>(myBlockedPositions);
+        return new HashSet<>(blockedPositions);
     }
 
     public void blockPosition(HexPosition pos) {
-        myBlockedPositions.add(pos);
+        blockedPositions.add(pos);
     }
 
     public List<HexPosition> getAllAvailablePositions() {
@@ -128,6 +123,4 @@ public class HexGameBoard extends GameBoard<HexPosition> {
         }
         return borders;
     }
-
-    // Alias para compatibilidad con HexGameState y HexGameService
 }

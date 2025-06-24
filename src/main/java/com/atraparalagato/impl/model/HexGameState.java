@@ -33,6 +33,7 @@ public class HexGameState extends GameState<HexPosition> {
         this.boardSize = boardSize;
         this.gameBoard = new HexGameBoard(boardSize);
         this.catPosition = new HexPosition(0, 0); // El gato inicia en el centro
+        this.catMovementStrategy = new BFSCatMovement(gameBoard); // <-- ¡Agrega esto!
     }
 
     public void setGameStatus(GameStatus status) {
@@ -47,13 +48,12 @@ public class HexGameState extends GameState<HexPosition> {
 
     @Override
     protected boolean performMove(HexPosition position) {
-        // Ejecuta el movimiento en el tablero
         if (canExecuteMove(position)) {
-            gameBoard.executeMove(position);
-            incrementMoveCount();
+            gameBoard.blockPosition(position);
             updateGameStatus();
             return true;
         }
+        updateGameStatus();
         return false;
     }
 
@@ -193,7 +193,9 @@ if (blockedObj instanceof Collection<?> blockedList) {
     }
 
     private boolean isCatTrapped() {
-        // El gato está atrapado si todas las posiciones adyacentes están bloqueadas
+        if (catMovementStrategy instanceof BFSCatMovement bfs) {
+            return !bfs.hasPathToBorder(catPosition);
+        }
         List<HexPosition> adj = gameBoard.getAdjacentPositions(catPosition);
         return adj.isEmpty() || adj.stream().allMatch(gameBoard::isBlocked);
     }
@@ -242,7 +244,6 @@ if (blockedObj instanceof Collection<?> blockedList) {
     }
 
     public void addMoveToHistory(HexPosition pos, String playerId) {
-        incrementMoveCount(); // Usa el método de la base
         Map<String, Object> move = new HashMap<>();
         move.put("position", pos);
         move.put("playerId", playerId);
@@ -276,7 +277,13 @@ if (blockedObj instanceof Collection<?> blockedList) {
     public void moveCat() {
     if (catMovementStrategy != null) {
         Optional<HexPosition> next = catMovementStrategy.findBestMove(catPosition, null);
-        next.ifPresent(this::setCatPosition);
+        if (next.isPresent()) {
+            setCatPosition(next.get());
+        } else {
+            // El gato está atrapado, el jugador gana
+            setGameStatus(GameStatus.PLAYER_WON);
+            winner = playerId != null ? playerId : "player";
+        }
     }
 }
 
@@ -294,5 +301,12 @@ if (blockedObj instanceof Collection<?> blockedList) {
                 // Manejar excepción o registrar error
             }
         }
+    }
+
+    public boolean makeMove(HexPosition pos, String playerId) {
+        incrementMoveCount(); // Siempre suma un movimiento al hacer click
+        boolean result = performMove(pos);
+        addMoveToHistory(pos, playerId); // Siempre agrega al historial
+        return result;
     }
 }

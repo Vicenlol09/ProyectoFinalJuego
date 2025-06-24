@@ -77,7 +77,6 @@ public class HexGameService extends GameService<HexPosition> {
         if (optState.isEmpty()) return Optional.empty();
         HexGameState state = optState.get();
 
-    
         if (state.isGameFinished()) return Optional.of(state);
         if (!state.getBoard().isPositionInBounds(position) || state.getBoard().isBlocked(position)) {
             return Optional.of(state);
@@ -85,10 +84,9 @@ public class HexGameService extends GameService<HexPosition> {
 
         if (!isValidAdvancedMove(state, position, playerId)) return Optional.of(state);
 
-          state.getBoard().blockPosition(position);
-        state.addMoveToHistory(position, playerId);
-        
-        
+       
+        state.makeMove(position, playerId);
+
         // Mover el gato usando la estrategia
         executeCatMove(state, state.getDifficulty());
 
@@ -244,7 +242,9 @@ public class HexGameService extends GameService<HexPosition> {
             move = Optional.empty();
         }
 
+        System.out.println("Posición del gato antes de mover: " + catPos);
         move.ifPresent(gameState::setCatPosition);
+        System.out.println("Posición del gato después de mover: " + gameState.getCatPosition());
     }
 
     @SuppressWarnings("unused")

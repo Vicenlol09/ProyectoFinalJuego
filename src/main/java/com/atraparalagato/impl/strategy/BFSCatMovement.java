@@ -35,14 +35,30 @@ public class BFSCatMovement extends CatMovementStrategy<HexPosition> {
     }
     @Override
     public Optional<HexPosition> selectBestMove(List<HexPosition> possibleMoves,
-                                                  HexPosition currentPosition,
-                                                  HexPosition targetPosition) {
+                                            HexPosition currentPosition,
+                                            HexPosition targetPosition) {
         if (possibleMoves.isEmpty()) return Optional.empty();
+
+        // 30% de las veces, elige un movimiento completamente aleatorio PERO válido
+        if (Math.random() < 0.6) {
+            List<HexPosition> shuffled = new ArrayList<>(possibleMoves);
+            Collections.shuffle(shuffled);
+            for (HexPosition move : shuffled) {
+                if (bfsToGoal(move).isPresent()) {
+                    return Optional.of(move);
+                }
+            }
+            // Si ninguno tiene camino, sigue con la lógica óptima
+        }
+
+        // El resto del tiempo, usa la lógica óptima
+        List<HexPosition> shuffledMoves = new ArrayList<>(possibleMoves);
+        Collections.shuffle(shuffledMoves);
 
         Predicate<HexPosition> isGoal = getGoalPredicate();
         List<HexPosition> bestPath = null;
 
-        for (HexPosition move : possibleMoves) {
+        for (HexPosition move : shuffledMoves) {
             List<HexPosition> path = bfsToGoal(move).orElse(null);
             if (path != null && !path.isEmpty() && isGoal.test(path.get(path.size() - 1))) {
                 if (bestPath == null || path.size() < bestPath.size()) {
@@ -78,9 +94,13 @@ public class BFSCatMovement extends CatMovementStrategy<HexPosition> {
         return 1.0;
     }
 
+    public boolean hasPathToBorder(HexPosition start) {
+        return bfsToGoal(start).isPresent();
+    }
+
     @Override
-    public boolean hasPathToGoal(HexPosition currentPosition) {
-        return bfsToGoal(currentPosition).isPresent();
+    public boolean hasPathToGoal(HexPosition start) {
+        return bfsToGoal(start).isPresent();
     }
 
     @Override
