@@ -161,6 +161,7 @@ public class H2GameRepository extends DataRepository<HexGameState, String> {
 
     @Override
     public List<HexGameState> findAllSorted(Function<HexGameState, ? extends Comparable<?>> sortKeyExtractor, boolean ascending) {
+        @SuppressWarnings("rawtypes")
         Comparator<HexGameState> comparator = Comparator.comparing(
             h -> (Comparable) sortKeyExtractor.apply(h),
             Comparator.nullsLast(Comparator.naturalOrder())

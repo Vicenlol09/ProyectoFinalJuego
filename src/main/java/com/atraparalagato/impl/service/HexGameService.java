@@ -15,6 +15,8 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.function.Function; 
 
+import com.atraparalagato.base.repository.DataRepository;
+
 public class HexGameService extends GameService<HexPosition> {
 
     private final H2GameRepository gameRepository;
@@ -39,10 +41,17 @@ public class HexGameService extends GameService<HexPosition> {
         Function<Integer, GameBoard<HexPosition>> boardFactory,
         Function<String, GameState<HexPosition>> gameStateFactory
     ) {
-            super(board, movementStrategy, repository, idGenerator, boardFactory, gameStateFactory);
-            this.gameRepository = repository;
-            this.gameIdGenerator = idGenerator;
-        }
+        super(
+            board,
+            movementStrategy,
+            (DataRepository<GameState<HexPosition>, String>) (DataRepository<?>) repository, // <-- cast seguro
+            idGenerator,
+            boardFactory,
+            gameStateFactory
+        );
+        this.gameRepository = repository;
+        this.gameIdGenerator = idGenerator;
+    }
 
     public HexGameState createGame(int boardSize, String difficulty, Map<String, Object> options) {
         if (boardSize < 3) throw new IllegalArgumentException("El tamaño mínimo es 3");
@@ -208,6 +217,7 @@ public class HexGameService extends GameService<HexPosition> {
         move.ifPresent(gameState::setCatPosition);
     }
 
+    @SuppressWarnings("unused")
     private int calculateAdvancedScore(HexGameState gameState, Map<String, Object> factors) {
         int base = gameState.getMoveHistory().size();
         int diff = "hard".equalsIgnoreCase(gameState.getDifficulty()) ? 10 : 0;
