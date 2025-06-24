@@ -78,13 +78,8 @@ public class HexGameService extends GameService<HexPosition> {
         HexGameState state = optState.get();
 
         if (state.isGameFinished()) return Optional.of(state);
-        if (!state.getBoard().isPositionInBounds(position) || state.getBoard().isBlocked(position)) {
-            return Optional.of(state);
-        }
 
-        if (!isValidAdvancedMove(state, position, playerId)) return Optional.of(state);
-
-       
+        // ¡SIEMPRE suma un movimiento, aunque la celda esté bloqueada o sea inválida!
         state.makeMove(position, playerId);
 
         // Mover el gato usando la estrategia
